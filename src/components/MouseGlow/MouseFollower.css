@@ -1,0 +1,58 @@
+/* ===== MOUSE FOLLOWER - BLACK CIRCLE ===== */
+.mouse-follower {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  background-color: #fd8738;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 15px rgba(249, 248, 248, 0.3);
+  transition: width 0.2s ease, height 0.2s ease, background-color 0.2s ease;
+  will-change: transform;
+  mix-blend-mode: normal;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Inner dot (smaller white dot inside) */
+.mouse-follower-dot {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  will-change: transform;
+}
+
+/* Hover effect on links and buttons */
+.mouse-follower.hover {
+  width: 48px;
+  height: 48px;
+  background-color: #333333;
+  mix-blend-mode: difference;
+}
+
+/* Hide on mobile devices */
+@media (hover: none) and (pointer: coarse) {
+  .mouse-follower,
+  .mouse-follower-dot {
+    display: none;
+  }
+}
+
+/* Optional: Different sizes for different elements */
+.mouse-follower.small {
+  width: 24px;
+  height: 24px;
+}
+
+.mouse-follower.large {
+  width: 48px;
+  height: 48px;
+  background-color: #222222;
+}
