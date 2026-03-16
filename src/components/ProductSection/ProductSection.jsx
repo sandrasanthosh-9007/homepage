@@ -1,14 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Container } from 'react-bootstrap';
+import { motion } from 'framer-motion';
 import './ProductSection.css';
 
 const ProductSection = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
   const [imageErrors, setImageErrors] = useState({});
-  const sliderRef = useRef(null);
-
+  const [duplicatedProducts, setDuplicatedProducts] = useState([]);
+  const scrollRef = useRef(null);
+  const animationRef = useRef(null);
+  const [scrollSpeed, setScrollSpeed] = useState(1);
+  const [isPaused, setIsPaused] = useState(false);
+  const [itemsToShow, setItemsToShow] = useState(4);
 
   const products = [
     {
@@ -36,7 +38,7 @@ const ProductSection = () => {
       description: 'An all-in-one CRM, HR, and project management tool to run your entire operations from start to finish.',
       color: '#D35400',
       icon: '💼',
-      image: '/images/products/clevebiz.png'
+      image: '/images/products/celevebiz.png'
     },
     {
       id: 4,
@@ -139,15 +141,30 @@ const ProductSection = () => {
     }
   ];
 
-  // Auto-slider effect
+  // Update itemsToShow based on screen size
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDirection(1);
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length);
-    }, 9000);
+    const handleResize = () => {
+      if (window.innerWidth <= 640) {
+        setItemsToShow(1);
+      } else if (window.innerWidth <= 968) {
+        setItemsToShow(2);
+      } else if (window.innerWidth <= 1200) {
+        setItemsToShow(3);
+      } else {
+        setItemsToShow(4);
+      }
+    };
 
-    return () => clearInterval(interval);
-  }, [products.length]);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Duplicate products for seamless infinite scroll
+  useEffect(() => {
+    const duplicated = [...products, ...products, ...products, ...products];
+    setDuplicatedProducts(duplicated);
+  }, []);
 
   // Handle image error
   const handleImageError = (productId) => {
@@ -157,49 +174,63 @@ const ProductSection = () => {
     }));
   };
 
-  // Slider navigation functions
-  const nextSlide = () => {
-    setDirection(1);
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length);
-  };
+  // Smooth scroll animation
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer || duplicatedProducts.length === 0) return;
 
-  const prevSlide = () => {
-    setDirection(-1);
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + products.length) % products.length);
-  };
-
-  const goToSlide = (index) => {
-    setDirection(index > currentIndex ? 1 : -1);
-    setCurrentIndex(index);
-  };
-
-  // Animation variants
-  const slideVariants = {
-    enter: (direction) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0,
-      scale: 0.5
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      transition: {
-        x: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.8 },
-        scale: { duration: 0.8 }
+    const scroll = () => {
+      if (!isPaused && scrollContainer) {
+        scrollContainer.scrollLeft += scrollSpeed;
+        
+        const maxScroll = (products.length * (scrollContainer.firstChild?.firstChild?.offsetWidth || 300) + 
+                          (products.length - 1) * 25) * 2;
+        
+        if (scrollContainer.scrollLeft >= maxScroll) {
+          scrollContainer.scrollLeft = 0;
+        }
       }
-    },
-    exit: (direction) => ({
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0,
-      scale: 0.8,
-      transition: {
-        x: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.5 },
-        scale: { duration: 0.5 }
+      
+      animationRef.current = requestAnimationFrame(scroll);
+    };
+
+    animationRef.current = requestAnimationFrame(scroll);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
       }
-    })
+    };
+  }, [isPaused, scrollSpeed, products.length, duplicatedProducts.length]);
+
+  // Handle mouse enter/pause
+  const handleMouseEnter = () => {
+    setIsPaused(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsPaused(false);
+  };
+
+  // Render image or placeholder (full upper portion)
+  const renderProductImage = (product) => {
+    if (imageErrors[product.id]) {
+      return (
+        <div className="product-image-placeholder-full">
+          <span className="placeholder-icon">{product.icon}</span>
+        </div>
+      );
+    } else {
+      return (
+        <img 
+          src={product.image}
+          alt={product.name}
+          className="product-card-image-full"
+          onError={() => handleImageError(product.id)}
+          loading="lazy"
+        />
+      );
+    }
   };
 
   const containerVariants = {
@@ -207,8 +238,8 @@ const ProductSection = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.3
+        staggerChildren: 0.1,
+        delayChildren: 0.2
       }
     }
   };
@@ -223,33 +254,6 @@ const ProductSection = () => {
         stiffness: 100,
         damping: 10
       }
-    }
-  };
-
-  // Get current product
-  const currentProduct = products[currentIndex];
-  const hasImageError = imageErrors[currentProduct.id];
-
-  // Render image or placeholder
-  const renderProductImage = () => {
-    if (hasImageError) {
-      return (
-        <div className="product-image-placeholder">
-          <div className="placeholder-icon-large">
-            {currentProduct.icon}
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <img 
-          src={currentProduct.image}
-          alt={currentProduct.name}
-          className="product-display-image"
-          onError={() => handleImageError(currentProduct.id)}
-          loading="lazy"
-        />
-      );
     }
   };
 
@@ -285,136 +289,89 @@ const ProductSection = () => {
           </motion.p>
         </motion.div>
 
-        {/* Main Slider Container */}
-        <div className="product-slider-container" ref={sliderRef}>
-          <motion.div 
-            className="slider-wrapper"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+        {/* Smooth Scrolling Carousel */}
+        <div className="smooth-carousel-container">
+          {/* Scrollable Track */}
+          <div 
+            className="carousel-track-container"
+            ref={scrollRef}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
-            {/* Navigation Buttons */}
-            <motion.button 
-              className="slider-nav-btn prev" 
-              onClick={prevSlide}
-              whileHover={{ scale: 1.1, backgroundColor: '#E67E22', color: '#ffffff' }}
-              whileTap={{ scale: 0.9 }}
-              variants={itemVariants}
-              aria-label="Previous product"
-            >
-              <i className="bi bi-chevron-left"></i>
-            </motion.button>
-            
-            <motion.button 
-              className="slider-nav-btn next" 
-              onClick={nextSlide}
-              whileHover={{ scale: 1.1, backgroundColor: '#E67E22', color: '#ffffff' }}
-              whileTap={{ scale: 0.9 }}
-              variants={itemVariants}
-              aria-label="Next product"
-            >
-              <i className="bi bi-chevron-right"></i>
-            </motion.button>
-
-            {/* Slider Content */}
-            <div className="slider-content-area">
-              <AnimatePresence mode="wait" custom={direction}>
+            <div className={`carousel-track grid-${itemsToShow}-cols`}>
+              {duplicatedProducts.map((product, index) => (
                 <motion.div
-                  key={currentIndex}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  className="slide-item-wrapper"
+                  key={`${product.id}-${index}`}
+                  className="product-card-full-image"
+                  whileHover={{ 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.02 }}
                 >
-                  {/* ===== FULL ORANGE BACKGROUND CONTAINER ===== */}
-                  <div className="orange-full-container">
-                    
-                    {/* White Square Container for Product Display */}
-                    <div className="white-product-square">
-                      <div className="product-square-content">
-                        
-                        {/* Product Image or Placeholder */}
-                        <div className="product-square-image-wrapper">
-                          {renderProductImage()}
-                        </div>
-                        
-                        {/* Product Info Overlay (Optional - can be removed if you want only image) */}
-                        <div className="product-square-info">
-                          <span className="product-square-category" style={{ color: currentProduct.color }}>
-                            {currentProduct.category}
-                          </span>
-                          <h3 className="product-square-name">
-                            {currentProduct.name}
-                          </h3>
-                        </div>
-                        
-                        {/* Version Badge */}
-                        <div className="product-square-badge">
-                          <span>v2.0</span>
-                        </div>
-                        
+                  <div className="product-card-inner-full">
+                    {/* Card Header with Full Image */}
+                    <div className="product-card-header-full">
+                      {renderProductImage(product)}
+                      
+                      {/* Overlay gradient for better text readability if needed */}
+                      <div className="card-header-overlay"></div>
+                      
+                      {/* Category badge positioned on image */}
+                      <div className="product-category-badge" style={{ background: product.color }}>
+                        {product.category}
                       </div>
+                      
+                      {/* Version badge */}
+                      <div className="product-version-badge">v2.0</div>
                     </div>
 
-                    {/* Decorative Elements */}
-                    <div className="orange-glow"></div>
-                    <div className="orange-ring ring-1"></div>
-                    <div className="orange-ring ring-2"></div>
-                    
-                    {/* Floating Decorative Dots */}
-                    <div className="decorative-dot dot-1"></div>
-                    <div className="decorative-dot dot-2"></div>
-                    <div className="decorative-dot dot-3"></div>
-                    <div className="decorative-dot dot-4"></div>
-                    
+                    {/* Card Body */}
+                    <div className="product-card-body-full">
+                      <h3 className="product-card-title-full">{product.name}</h3>
+                      <p className="product-card-description-full">{product.description}</p>
+                      
+                      {/* Learn More Button */}
+                      <motion.button 
+                        className="product-card-btn-full"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{ 
+                          background: `linear-gradient(135deg, ${product.color}, ${product.color}dd)`,
+                          color: '#ffffff'
+                        }}
+                      >
+                        Learn More
+                      </motion.button>
+                    </div>
                   </div>
                 </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Dots Navigation */}
-            <div className="slider-dots-container">
-              {products.map((_, index) => (
-                <motion.button
-                  key={index}
-                  className={`slider-dot ${index === currentIndex ? 'active' : ''}`}
-                  onClick={() => goToSlide(index)}
-                  whileHover={{ scale: 1.3 }}
-                  whileTap={{ scale: 0.9 }}
-                  style={{
-                    background: index === currentIndex ? currentProduct.color : '#e0e0e0'
-                  }}
-                  aria-label={`Go to product ${index + 1}`}
-                />
               ))}
             </div>
-          </motion.div>
+          </div>
+
+          {/* Gradient Overlays for Fade Effect */}
+          <div className="carousel-fade-left"></div>
+          <div className="carousel-fade-right"></div>
         </div>
 
-        {/* Progress Bar */}
-        <motion.div 
-          className="slider-progress-showcase"
-          variants={itemVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          <div className="progress-bar-showcase">
-            <motion.div 
-              className="progress-fill-showcase"
-              initial={{ width: '0%' }}
-              animate={{ width: `${((currentIndex + 1) / products.length) * 100}%` }}
-              transition={{ duration: 0.5 }}
-              style={{ background: `linear-gradient(90deg, ${currentProduct.color}, #F39C12)` }}
-            ></motion.div>
+        {/* Progress Indicator */}
+        <div className="carousel-progress">
+          <div className="progress-dots">
+            {products.slice(0, 8).map((_, index) => (
+              <span 
+                key={index} 
+                className="progress-dot"
+                style={{
+                  background: `linear-gradient(135deg, #F39C12, #E67E22)`
+                }}
+              ></span>
+            ))}
           </div>
-          <span className="progress-text-showcase">
-            {currentIndex + 1} / {products.length}
-          </span>
-        </motion.div>
+          <p className="progress-text">Continuously scrolling • {products.length}+ products</p>
+        </div>
       </Container>
 
       {/* Background Decoration */}

@@ -84,7 +84,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 50px;
+  gap: 60px; /* Increased gap for more spacing */
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -92,7 +92,7 @@
 .orange-content-left {
   flex: 1;
   color: #ffffff;
-  padding-right: 30px;
+  padding-right: 40px; /* Increased right padding for more space */
 }
 
 .content-wrapper {
@@ -185,6 +185,8 @@
 /* Right Side - Video Container */
 .orange-content-right {
   flex: 0.8;
+  padding-right: 20px; /* Added right padding for right side space */
+  margin-right: 10px; /* Added margin for extra space */
 }
 
 .video-container {
@@ -522,7 +524,7 @@
 @media (max-width: 1200px) {
   .orange-container-xl {
     padding: 60px 50px;
-    gap: 40px;
+    gap: 50px;
     min-height: 550px;
   }
   
@@ -532,6 +534,11 @@
   
   .white-video-box-small {
     max-width: 450px;
+  }
+  
+  .orange-content-right {
+    padding-right: 15px;
+    margin-right: 5px;
   }
 }
 
@@ -547,6 +554,14 @@
   .orange-content-left {
     padding-right: 0;
     text-align: center;
+  }
+  
+  .orange-content-right {
+    padding-right: 0;
+    margin-right: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
   
   .content-wrapper {
